@@ -1,0 +1,32 @@
+---
+# Create a classroom with 30 users
+
+- hosts: classroom
+  vars:
+    number_of_students: 30
+    number_of_instructors: 2
+    remote_user: root
+  tasks:
+    - name: create admin group
+      group: name=admin state=present
+
+    - name: create instructors
+      user: name=instructor{{ item }} state=present shell=/bin/bash groups=admin password="{{ lookup('password', 'passwords/instructor' + item + '.txt encrypt=sha512_crypt length=8') }}"
+      with_sequence: count={{ number_of_instructors }}
+
+    - name: create students
+      user: name=student{{ item }} state=present shell=/bin/bash password="{{ lookup('password', 'passwords/student' + item + '.txt encrypt=sha512_crypt length=8') }}"
+      with_sequence: count={{ number_of_students }}
+
+    - name: Create example directory per student
+      file: path=/home/student{{ item }}/exampleFolder owner=student{{item}} recurse=yes mode=0755 state=directory
+      with_sequence: count={{ number_of_students }}
+
+    - name: Create example file
+      copy: src=files/class.txt dest=/home/student{{ item }}/class.txt owner=student{{item}} mode=0644
+      with_sequence: count={{ number_of_students }}
+
+    - name: Create example file in the directory
+      copy: src=files/class.txt dest=/home/student{{ item }}/exampleFolder/differentFile.txt owner=student{{item}} mode=0644
+      with_sequence: count={{ number_of_students }}
+
